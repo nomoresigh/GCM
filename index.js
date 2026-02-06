@@ -338,6 +338,7 @@ function renderModels(models) {
             modelEl.on("click", () => {
                 $(".copilot-model-item").removeClass("selected");
                 modelEl.addClass("selected");
+                setModelsPanelCollapsed(false);
                 $("#copilot_model_detail").show();
                 $("#copilot_model_json").val(JSON.stringify(m, null, 2));
             });
@@ -449,26 +450,18 @@ function renderPremiumUsage(snapshots) {
     for (const [key, val] of Object.entries(snapshots)) {
         const label = key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
         const unlimited = val.unlimited === true;
-        const entitlement = typeof val.entitlement === "number" ? val.entitlement : null;
         const remaining = typeof val.remaining === "number" ? val.remaining : null;
-        const used = (entitlement !== null && remaining !== null) ? Math.max(entitlement - remaining, 0) : null;
 
-        const usedDisplay = unlimited ? "∞" : (remaining !== null ? remaining : "-");
-        const limitDisplay = unlimited ? "∞" : (entitlement !== null ? entitlement : "-");
+        const remainingDisplay = unlimited
+            ? "∞회 남음"
+            : (remaining !== null ? `${remaining}회 남음` : "-");
 
-        const pctValue = (typeof val.percent_remaining === "number")
-            ? Math.round(val.percent_remaining)
-            : (entitlement && remaining !== null)
-                ? Math.round((remaining / entitlement) * 100)
-                : null;
-        const pct = pctValue !== null ? ` (${pctValue}%)` : "";
-
-        const color = (!unlimited && typeof used === "number" && typeof entitlement === "number" && used >= entitlement)
+        const color = (!unlimited && typeof remaining === "number" && remaining <= 0)
             ? "color:#f44336;" : "";
 
         rows += `<tr>
             <td>${label}:</td>
-            <td style="${color}">${usedDisplay} / ${limitDisplay}${pct}</td>
+            <td style="${color}">${remainingDisplay}</td>
         </tr>`;
 
         const overageCount = val.overage ?? val.overage_count;
@@ -673,6 +666,10 @@ jQuery(async () => {
 
     // 모델 목록
     $("#copilot_fetch_models_btn").on("click", fetchModels);
+    $("#copilot_toggle_models_btn").on("click", () => {
+        const panelVisible = $("#copilot_models_panel").is(":visible");
+        setModelsPanelCollapsed(panelVisible);
+    });
 
     // 사용량
     $("#copilot_fetch_usage_btn").on("click", fetchUsageInfo);
