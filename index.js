@@ -13,17 +13,10 @@ const COPILOT_INTERNAL_TOKEN_URL = "https://api.github.com/copilot_internal/v2/t
 
 const defaultSettings = {
     token: "",
-    autoRetry: false,
-    retryCount: 3,
-    retryDelay: 2,
-    stats: { total: 0, success: 0, fail: 0, retries: 0 },
+    stats: { total: 0, success: 0, fail: 0 },
 };
 
 let pollInterval = null;
-let gcmRetryCount = 0;
-let gcmRetrying = false;
-let gcmRetryTimeout = null;
-let gcmRetryPending = false;
 
 /**
  * SillyTavern의 CORS 프록시(/proxy/)를 통해 외부 API에 요청합니다.
@@ -74,10 +67,6 @@ function loadSettings() {
         $("#copilot_token_display").val("");
         $("#copilot_token_info").text("");
     }
-    $("#copilot_auto_retry").prop("checked", s.autoRetry).trigger("input");
-    $("#copilot_retry_count").val(s.retryCount);
-    $("#copilot_retry_delay").val(s.retryDelay);
-
     updateStatsUI();
 }
 
@@ -100,16 +89,14 @@ function updateStatsUI() {
     $("#copilot_req_total").text(s.total);
     $("#copilot_req_success").text(s.success);
     $("#copilot_req_fail").text(s.fail);
-    $("#copilot_req_retries").text(s.retries);
 }
 
-function recordRequest(success, retried = false) {
+function recordRequest(success) {
     const s = getSettings();
-    if (!s.stats) s.stats = { total: 0, success: 0, fail: 0, retries: 0 };
+    if (!s.stats) s.stats = { total: 0, success: 0, fail: 0 };
     s.stats.total++;
     if (success) s.stats.success++;
     else s.stats.fail++;
-    if (retried) s.stats.retries++;
     saveSettings();
     updateStatsUI();
 }
@@ -482,73 +469,6 @@ function renderPremiumUsage(snapshots) {
 }
 
 // ============================================================
-// 전역 자동 재시도 (기본 커스텀 요청용)
-// ============================================================
-
-function resetGlobalRetryState() {
-    gcmRetryCount = 0;
-    gcmRetrying = false;
-    gcmRetryPending = false;
-    if (gcmRetryTimeout) {
-        clearTimeout(gcmRetryTimeout);
-        gcmRetryTimeout = null;
-    }
-}
-
-function triggerGlobalRetry() {
-    const sendButton = document.getElementById("send_but");
-    if (sendButton && !sendButton.classList.contains("displayNone")) {
-        sendButton.click();
-        return;
-    }
-
-    const sendForm = document.getElementById("rightSendForm");
-    if (sendForm) {
-        const btn = sendForm.querySelector(".mes_send");
-        if (btn) {
-            btn.click();
-            return;
-        }
-    }
-
-    try {
-        $("#send_but").trigger("click");
-    } catch (err) {
-        console.error("[GCM] 재시도 트리거 실패:", err);
-    }
-}
-
-function scheduleGlobalRetry() {
-    const settings = getSettings();
-    if (!settings.autoRetry) return;
-
-    const maxRetries = settings.retryCount || 0;
-    if (maxRetries <= 0) return;
-
-    if (gcmRetryCount >= maxRetries) {
-        gcmRetrying = false;
-        return;
-    }
-
-    if (gcmRetrying) return;
-    gcmRetrying = true;
-    gcmRetryCount++;
-
-    const delayMs = Math.max(1, settings.retryDelay || 1) * 1000;
-    toastr.warning(`재시도 중... (${gcmRetryCount}/${maxRetries})`);
-
-    if (gcmRetryTimeout) {
-        clearTimeout(gcmRetryTimeout);
-    }
-    gcmRetryTimeout = setTimeout(() => {
-        gcmRetrying = false;
-        gcmRetryTimeout = null;
-        gcmRetryPending = true;
-        triggerGlobalRetry();
-    }, delayMs);
-}
-
-// ============================================================
 // 유틸리티
 // ============================================================
 function copyToClipboard(text, label = "텍스트") {
@@ -572,43 +492,6 @@ function copyToClipboard(text, label = "텍스트") {
 // 초기화
 // ============================================================
 jQuery(async () => {
-    if (!window.__gcmFetchWrapped) {
-        window.__gcmFetchWrapped = true;
-        const originalFetch = window.fetch;
-
-        window.fetch = async function (...args) {
-            const [resource, config] = args;
-            const url = typeof resource === "string" ? resource : resource?.url || "";
-
-            const isChatCompletion = url.includes("/api/backends/chat-completions/generate");
-            const isPostMethod = !config?.method || config.method.toUpperCase() === "POST";
-
-            try {
-                const response = await originalFetch.apply(this, args);
-
-                if (isChatCompletion && isPostMethod) {
-                    if (!response.ok) {
-                        console.warn(`[GCM] Chat completion failed with status ${response.status}. Retrying...`);
-                        scheduleGlobalRetry();
-                    } else {
-                        resetGlobalRetryState();
-                    }
-                }
-
-                return response;
-            } catch (error) {
-                if (isChatCompletion && isPostMethod) {
-                    const settings = getSettings();
-                    if (settings.autoRetry) {
-                        console.warn("[GCM] Chat completion threw an error. Retrying...", error?.message || error);
-                        scheduleGlobalRetry();
-                    }
-                }
-                throw error;
-            }
-        };
-    }
-
     const settingsHtml = await $.get(`${extensionFolderPath}/settings.html`);
     $("#extensions_settings").append(settingsHtml);
 
@@ -694,28 +577,6 @@ jQuery(async () => {
     // 사용량
     $("#copilot_fetch_usage_btn").on("click", fetchUsageInfo);
 
-    // 자동 재시도 토글
-    $("#copilot_auto_retry").on("input", function () {
-        const checked = $(this).prop("checked");
-        getSettings().autoRetry = checked;
-        saveSettings();
-        if (checked) {
-            $("#copilot_retry_options").slideDown();
-        } else {
-            $("#copilot_retry_options").slideUp();
-        }
-    });
-
-    // 재시도 설정 변경
-    $("#copilot_retry_count").on("change", function () {
-        getSettings().retryCount = parseInt($(this).val()) || 3;
-        saveSettings();
-    });
-    $("#copilot_retry_delay").on("change", function () {
-        getSettings().retryDelay = parseInt($(this).val()) || 2;
-        saveSettings();
-    });
-
     // 통계 초기화
     $("#copilot_reset_stats_btn").on("click", () => {
         getSettings().stats = { total: 0, success: 0, fail: 0, retries: 0 };
@@ -728,20 +589,4 @@ jQuery(async () => {
     loadSettings();
     setModelsPanelCollapsed(true);
 
-    try {
-        const { eventSource, event_types } = getContext();
-        eventSource.on(event_types.GENERATION_STARTED, (_type, _params, isDryRun) => {
-            if (isDryRun) return;
-            if (gcmRetryPending) {
-                gcmRetryPending = false;
-                return;
-            }
-            resetGlobalRetryState();
-        });
-        eventSource.on(event_types.CHAT_CHANGED, () => {
-            resetGlobalRetryState();
-        });
-    } catch (err) {
-        console.warn("[GCM] Failed to attach generation events:", err);
-    }
 });

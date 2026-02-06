@@ -78,26 +78,7 @@
 
             <hr class="sysHR" />
 
-            <!-- 섹션 3: 자동 재시도 설정 -->
-            <div class="copilot-section">
-                <h4><i class="fa-solid fa-rotate"></i> 자동 재시도 설정</h4>
-                <div class="flex-container flexFlowColumn">
-                    <div class="flex-container" style="align-items:center;">
-                        <input id="copilot_auto_retry" type="checkbox" />
-                        <label for="copilot_auto_retry">자동 재시도 활성화</label>
-                    </div>
-                    <div id="copilot_retry_options" style="display:none;">
-                        <label for="copilot_retry_count">최대 재시도 횟수:</label>
-                        <input id="copilot_retry_count" type="number" class="text_pole" min="1" max="20" value="3" style="width:80px;" />
-                        <label for="copilot_retry_delay">재시도 간격 (초):</label>
-                        <input id="copilot_retry_delay" type="number" class="text_pole" min="1" max="60" value="2" style="width:80px;" />
-                    </div>
-                </div>
-            </div>
-
-            <hr class="sysHR" />
-
-            <!-- 섹션 4: 구독 & 사용량 -->
+            <!-- 섹션 3: 구독 & 사용량 -->
             <div class="copilot-section">
                 <h4><i class="fa-solid fa-chart-bar"></i> 구독 및 사용량</h4>
                 <div class="flex-container flexFlowColumn">
@@ -121,7 +102,6 @@
                             <tr><td>이번 세션 총 요청:</td><td id="copilot_req_total">0</td></tr>
                             <tr><td>성공:</td><td id="copilot_req_success" style="color:#4CAF50;">0</td></tr>
                             <tr><td>실패:</td><td id="copilot_req_fail" style="color:#f44336;">0</td></tr>
-                            <tr><td>재시도:</td><td id="copilot_req_retries" style="color:#FF9800;">0</td></tr>
                         </table>
                         <input id="copilot_reset_stats_btn" class="menu_button" type="button" value="🔄 통계 초기화" style="margin-top:5px;" />
                     </div>
