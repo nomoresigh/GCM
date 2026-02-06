@@ -13,7 +13,6 @@ const COPILOT_INTERNAL_TOKEN_URL = "https://api.github.com/copilot_internal/v2/t
 
 const defaultSettings = {
     token: "",
-    stats: { total: 0, success: 0, fail: 0 },
 };
 
 let pollInterval = null;
@@ -67,7 +66,6 @@ function loadSettings() {
         $("#copilot_token_display").val("");
         $("#copilot_token_info").text("");
     }
-    updateStatsUI();
 }
 
 function saveSettings() {
@@ -79,26 +77,6 @@ function getSettings() {
         extension_settings[extensionName] = JSON.parse(JSON.stringify(defaultSettings));
     }
     return extension_settings[extensionName];
-}
-
-// ============================================================
-// 통계
-// ============================================================
-function updateStatsUI() {
-    const s = getSettings().stats || defaultSettings.stats;
-    $("#copilot_req_total").text(s.total);
-    $("#copilot_req_success").text(s.success);
-    $("#copilot_req_fail").text(s.fail);
-}
-
-function recordRequest(success) {
-    const s = getSettings();
-    if (!s.stats) s.stats = { total: 0, success: 0, fail: 0 };
-    s.stats.total++;
-    if (success) s.stats.success++;
-    else s.stats.fail++;
-    saveSettings();
-    updateStatsUI();
 }
 
 // ============================================================
@@ -576,14 +554,6 @@ jQuery(async () => {
 
     // 사용량
     $("#copilot_fetch_usage_btn").on("click", fetchUsageInfo);
-
-    // 통계 초기화
-    $("#copilot_reset_stats_btn").on("click", () => {
-        getSettings().stats = { total: 0, success: 0, fail: 0, retries: 0 };
-        saveSettings();
-        updateStatsUI();
-        toastr.info("통계가 초기화되었습니다.");
-    });
 
     // 설정 로드
     loadSettings();
