@@ -25,6 +25,37 @@ const defaultSettings = {
 
 let pollInterval = null;
 
+/**
+ * SillyTavern의 CORS 프록시(/proxy/)를 통해 외부 API에 요청합니다.
+ * config.yaml에서 enableCorsProxy: true 필요
+ * @param {string} url 요청할 외부 URL
+ * @param {RequestInit} [options] fetch 옵션
+ * @returns {Promise<Response>} fetch 응답
+ */
+async function proxyFetch(url, options = {}) {
+    const proxyUrl = `/proxy/${encodeURIComponent(url)}`;
+
+    const headers = {};
+    if (options.headers) {
+        if (options.headers instanceof Headers) {
+            options.headers.forEach((v, k) => { headers[k] = v; });
+        } else {
+            Object.assign(headers, options.headers);
+        }
+    }
+
+    const fetchOptions = {
+        method: options.method || "GET",
+        headers: headers,
+    };
+
+    if (options.body != null) {
+        fetchOptions.body = options.body;
+    }
+
+    return fetch(proxyUrl, fetchOptions);
+}
+
 // ============================================================
 // 설정 로드 / 저장
 // ============================================================
@@ -59,6 +90,9 @@ function saveSettings() {
 }
 
 function getSettings() {
+    if (!extension_settings[extensionName]) {
+        extension_settings[extensionName] = JSON.parse(JSON.stringify(defaultSettings));
+    }
     return extension_settings[extensionName];
 }
 
@@ -93,17 +127,16 @@ async function startAuth() {
     $("#copilot_auth_status").text("서버 통신 중...").css("color", "");
 
     try {
-        const body = new URLSearchParams({
-            client_id: CLIENT_ID,
-            scope: "read:user user:email copilot",
-        });
-        const res = await fetch(GITHUB_DEVICE_CODE_URL, {
+        const res = await proxyFetch(GITHUB_DEVICE_CODE_URL, {
             method: "POST",
             headers: {
                 "Accept": "application/json",
-                "Content-Type": "application/x-www-form-urlencoded",
+                "Content-Type": "application/json",
             },
-            body: body.toString(),
+            body: JSON.stringify({
+                client_id: CLIENT_ID,
+                scope: "read:user user:email copilot",
+            }),
         });
 
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -136,19 +169,17 @@ function pollForToken(deviceCode, interval) {
 
     const pollOnce = async () => {
         try {
-            const body = new URLSearchParams({
-                client_id: CLIENT_ID,
-                device_code: deviceCode,
-                grant_type: "urn:ietf:params:oauth:grant-type:device_code",
-            });
-
-            const res = await fetch(GITHUB_OAUTH_TOKEN_URL, {
+            const res = await proxyFetch(GITHUB_OAUTH_TOKEN_URL, {
                 method: "POST",
                 headers: {
                     "Accept": "application/json",
-                    "Content-Type": "application/x-www-form-urlencoded",
+                    "Content-Type": "application/json",
                 },
-                body: body.toString(),
+                body: JSON.stringify({
+                    client_id: CLIENT_ID,
+                    device_code: deviceCode,
+                    grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+                }),
             });
 
             const data = await res.json();
@@ -220,7 +251,7 @@ async function fetchModels() {
     $("#copilot_fetch_models_btn").val("⏳ 가져오는 중...").prop("disabled", true);
 
     try {
-        const res = await fetch(`${COPILOT_API_BASE}/models`, {
+        const res = await proxyFetch(`${COPILOT_API_BASE}/models`, {
             headers: {
                 "Authorization": `Bearer ${token}`,
                 "Accept": "application/json",
@@ -320,7 +351,7 @@ async function fetchUsageInfo() {
 
     try {
         // 1) Copilot 내부 토큰 정보 (구독 상태)
-        const tokenRes = await fetch(COPILOT_INTERNAL_TOKEN_URL, {
+        const tokenRes = await proxyFetch(COPILOT_INTERNAL_TOKEN_URL, {
             headers: {
                 "Authorization": `token ${token}`,
                 "Accept": "application/json",
@@ -333,7 +364,7 @@ async function fetchUsageInfo() {
         }
 
         // 2) 사용자 프리미엄 요청 사용량
-        const userRes = await fetch("https://api.github.com/copilot_internal/user", {
+        const userRes = await proxyFetch("https://api.github.com/copilot_internal/user", {
             headers: {
                 "Authorization": `token ${token}`,
                 "Accept": "application/json",
@@ -458,7 +489,7 @@ async function copilotChatWithRetry(requestBody) {
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
         try {
-            const res = await fetch(`${COPILOT_API_BASE}/chat/completions`, {
+            const res = await proxyFetch(`${COPILOT_API_BASE}/chat/completions`, {
                 method: "POST",
                 headers: {
                     "Authorization": `Bearer ${token}`,
