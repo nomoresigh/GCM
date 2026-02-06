@@ -39,6 +39,9 @@ function loadSettings() {
     if (s.token) {
         $("#copilot_token_display").val(s.token);
         $("#copilot_token_info").text("토큰이 저장되어 있습니다.");
+    } else {
+        $("#copilot_token_display").val("");
+        $("#copilot_token_info").text("");
     }
     $("#copilot_auto_retry").prop("checked", s.autoRetry).trigger("input");
     $("#copilot_retry_count").val(s.retryCount);
@@ -559,6 +562,40 @@ jQuery(async () => {
         } else {
             input.attr("type", "password");
             $("#copilot_toggle_token_btn").val("👁️");
+        }
+    });
+
+    // 토큰 직접 입력 저장
+    $("#copilot_save_token_btn").on("click", () => {
+        const token = $("#copilot_token_display").val().trim();
+        const s = getSettings();
+        s.token = token;
+        saveSettings();
+        if (token) {
+            $("#copilot_token_info").text("토큰이 저장되어 있습니다.");
+            toastr.success("토큰이 저장되었습니다.");
+        } else {
+            $("#copilot_token_info").text("");
+            toastr.info("토큰이 비어 있습니다.");
+        }
+    });
+
+    $("#copilot_token_display").on("change", () => {
+        const token = $("#copilot_token_display").val().trim();
+        const s = getSettings();
+        s.token = token;
+        saveSettings();
+        if (token) {
+            $("#copilot_token_info").text("토큰이 저장되어 있습니다.");
+        } else {
+            $("#copilot_token_info").text("");
+        }
+    });
+
+    $("#copilot_token_display").on("keydown", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            $("#copilot_save_token_btn").trigger("click");
         }
     });
 
