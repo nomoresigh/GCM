@@ -394,23 +394,34 @@ function renderPremiumUsage(snapshots) {
     let rows = "";
     for (const [key, val] of Object.entries(snapshots)) {
         const label = key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-        const used = val.used ?? "-";
-        const limit = val.limit ?? "∞";
-        const pct = (typeof val.used === "number" && typeof val.limit === "number" && val.limit > 0)
-            ? ` (${Math.round(val.used / val.limit * 100)}%)`
-            : "";
-        const color = (typeof val.used === "number" && typeof val.limit === "number" && val.used >= val.limit)
+        const unlimited = val.unlimited === true;
+        const entitlement = typeof val.entitlement === "number" ? val.entitlement : null;
+        const remaining = typeof val.remaining === "number" ? val.remaining : null;
+        const used = (entitlement !== null && remaining !== null) ? Math.max(entitlement - remaining, 0) : null;
+
+        const usedDisplay = unlimited ? "∞" : (remaining !== null ? remaining : "-");
+        const limitDisplay = unlimited ? "∞" : (entitlement !== null ? entitlement : "-");
+
+        const pctValue = (typeof val.percent_remaining === "number")
+            ? Math.round(val.percent_remaining)
+            : (entitlement && remaining !== null)
+                ? Math.round((remaining / entitlement) * 100)
+                : null;
+        const pct = pctValue !== null ? ` (${pctValue}%)` : "";
+
+        const color = (!unlimited && typeof used === "number" && typeof entitlement === "number" && used >= entitlement)
             ? "color:#f44336;" : "";
 
         rows += `<tr>
             <td>${label}:</td>
-            <td style="${color}">${used} / ${limit}${pct}</td>
+            <td style="${color}">${usedDisplay} / ${limitDisplay}${pct}</td>
         </tr>`;
 
-        if (val.overage && val.overage > 0) {
+        const overageCount = val.overage ?? val.overage_count;
+        if (typeof overageCount === "number" && overageCount > 0) {
             rows += `<tr>
                 <td style="padding-left:20px; color:#FF9800;">↳ 초과분:</td>
-                <td style="color:#f44336;">${val.overage}</td>
+                <td style="color:#f44336;">${overageCount}</td>
             </tr>`;
         }
     }
