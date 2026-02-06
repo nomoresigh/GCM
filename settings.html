@@ -1,0 +1,128 @@
+<div class="copilot-manager-settings">
+    <div class="inline-drawer">
+        <div class="inline-drawer-toggle inline-drawer-header">
+            <b>GitHub Copilot Manager</b>
+            <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
+        </div>
+        <div class="inline-drawer-content">
+
+            <!-- 섹션 1: 인증 -->
+            <div class="copilot-section">
+                <h4><i class="fa-solid fa-key"></i> 인증 (Authentication)</h4>
+                <div class="flex-container flexFlowColumn">
+                    <div class="flex-container">
+                        <input id="copilot_auth_btn" class="menu_button" type="button" value="🔐 토큰 발급 시작" />
+                        <input id="copilot_revoke_btn" class="menu_button" type="button" value="🗑️ 토큰 삭제" />
+                    </div>
+                    <!-- 인증 진행 중 표시 영역 -->
+                    <div id="copilot_auth_progress" style="display:none;">
+                        <div class="copilot-info-box">
+                            <p>아래 코드를 브라우저에 입력하세요:</p>
+                            <div class="flex-container flexGap5" style="align-items:center;">
+                                <code id="copilot_user_code" class="copilot-code"></code>
+                                <input id="copilot_copy_code_btn" class="menu_button" type="button" value="📋 복사" style="width:auto;" />
+                            </div>
+                            <p>인증 페이지: <a id="copilot_verify_url" href="#" target="_blank"></a></p>
+                            <p id="copilot_auth_status" class="copilot-status">대기 중...</p>
+                        </div>
+                    </div>
+                    <!-- 토큰 표시 영역 -->
+                    <label for="copilot_token_display">현재 토큰:</label>
+                    <div class="flex-container flexGap5">
+                        <input id="copilot_token_display" type="password" class="text_pole" readonly placeholder="토큰이 없습니다" />
+                        <input id="copilot_toggle_token_btn" class="menu_button" type="button" value="👁️" style="width:auto;" title="토큰 보기/숨기기" />
+                        <input id="copilot_copy_token_btn" class="menu_button" type="button" value="📋" style="width:auto;" title="토큰 복사" />
+                    </div>
+                    <small id="copilot_token_info" class="copilot-dim"></small>
+                </div>
+            </div>
+
+            <hr class="sysHR" />
+
+            <!-- 섹션 2: 모델 목록 -->
+            <div class="copilot-section">
+                <h4><i class="fa-solid fa-robot"></i> 사용 가능한 모델</h4>
+                <div class="flex-container flexFlowColumn">
+                    <input id="copilot_fetch_models_btn" class="menu_button" type="button" value="🔄 모델 목록 새로고침" />
+                    <div id="copilot_models_list" class="copilot-models-container" style="display:none;">
+                        <!-- 모델 목록이 동적으로 렌더링됨 -->
+                    </div>
+                    <div id="copilot_model_detail" style="display:none;">
+                        <label>선택한 모델 JSON:</label>
+                        <textarea id="copilot_model_json" class="text_pole" rows="12" readonly style="font-family:Consolas,monospace; font-size:12px;"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="sysHR" />
+
+            <!-- 섹션 3: 자동 재시도 설정 -->
+            <div class="copilot-section">
+                <h4><i class="fa-solid fa-rotate"></i> 자동 재시도 설정</h4>
+                <div class="flex-container flexFlowColumn">
+                    <div class="flex-container" style="align-items:center;">
+                        <input id="copilot_auto_retry" type="checkbox" />
+                        <label for="copilot_auto_retry">자동 재시도 활성화</label>
+                    </div>
+                    <div id="copilot_retry_options" style="display:none;">
+                        <label for="copilot_retry_count">최대 재시도 횟수:</label>
+                        <input id="copilot_retry_count" type="number" class="text_pole" min="1" max="20" value="3" style="width:80px;" />
+                        <label for="copilot_retry_delay">재시도 간격 (초):</label>
+                        <input id="copilot_retry_delay" type="number" class="text_pole" min="1" max="60" value="2" style="width:80px;" />
+                        <div class="flex-container" style="align-items:center;">
+                            <input id="copilot_retry_on_400" type="checkbox" checked />
+                            <label for="copilot_retry_on_400">400 Bad Request 시 재시도</label>
+                        </div>
+                        <div class="flex-container" style="align-items:center;">
+                            <input id="copilot_retry_on_model_err" type="checkbox" checked />
+                            <label for="copilot_retry_on_model_err">Model not supported 시 재시도</label>
+                        </div>
+                        <div class="flex-container" style="align-items:center;">
+                            <input id="copilot_retry_on_429" type="checkbox" checked />
+                            <label for="copilot_retry_on_429">429 Rate Limit 시 재시도</label>
+                        </div>
+                        <div class="flex-container" style="align-items:center;">
+                            <input id="copilot_retry_on_500" type="checkbox" checked />
+                            <label for="copilot_retry_on_500">500+ 서버 에러 시 재시도</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="sysHR" />
+
+            <!-- 섹션 4: 구독 & 사용량 -->
+            <div class="copilot-section">
+                <h4><i class="fa-solid fa-chart-bar"></i> 구독 및 사용량</h4>
+                <div class="flex-container flexFlowColumn">
+                    <input id="copilot_fetch_usage_btn" class="menu_button" type="button" value="📊 사용량 확인" />
+                    <div id="copilot_usage_info" style="display:none;">
+                        <div class="copilot-info-box">
+                            <b>📋 구독 정보</b>
+                            <table class="copilot-usage-table" style="margin-top:6px;">
+                                <tr><td>구독 플랜:</td><td id="copilot_plan">-</td></tr>
+                                <tr><td>쿼터 리셋일:</td><td id="copilot_renewal">-</td></tr>
+                                <tr><td>Copilot Chat:</td><td id="copilot_chat_enabled">-</td></tr>
+                                <tr><td>토큰 만료:</td><td id="copilot_token_expires">-</td></tr>
+                            </table>
+                        </div>
+                        <!-- 프리미엄 사용량은 JS에서 동적으로 추가됨 -->
+                    </div>
+                    <!-- 세션 통계 -->
+                    <div class="copilot-info-box" style="margin-top:8px;">
+                        <b>📈 세션 통계</b>
+                        <table class="copilot-usage-table" style="margin-top:6px;">
+                            <tr><td>이번 세션 총 요청:</td><td id="copilot_req_total">0</td></tr>
+                            <tr><td>성공:</td><td id="copilot_req_success" style="color:#4CAF50;">0</td></tr>
+                            <tr><td>실패:</td><td id="copilot_req_fail" style="color:#f44336;">0</td></tr>
+                            <tr><td>재시도:</td><td id="copilot_req_retries" style="color:#FF9800;">0</td></tr>
+                        </table>
+                        <input id="copilot_reset_stats_btn" class="menu_button" type="button" value="🔄 통계 초기화" style="margin-top:5px;" />
+                    </div>
+                </div>
+            </div>
+
+            <hr class="sysHR" />
+        </div>
+    </div>
+</div>

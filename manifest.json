@@ -1,0 +1,11 @@
+{
+    "display_name": "GCM",
+    "loading_order": 100,
+    "requires": [],
+    "optional": [],
+    "js": "index.js",
+    "css": "style.css",
+    "author": "nomoresigh",
+    "version": "1.0.0",
+    "homePage": "https://github.com/nomoresigh/GCM"
+}
