@@ -265,6 +265,15 @@ async function fetchModels() {
         const data = await res.json();
         const models = data.data || [];
 
+        if (models.length === 0) {
+            $("#copilot_models_list").empty().hide();
+            $("#copilot_model_detail").hide();
+            $("#copilot_toggle_models_btn").hide();
+            setModelsPanelCollapsed(true);
+            toastr.warning("가져올 수 있는 모델이 없습니다.");
+            return;
+        }
+
         renderModels(models);
         toastr.success(`${models.length}개 모델을 불러왔습니다.`);
     } catch (err) {
@@ -277,6 +286,8 @@ async function fetchModels() {
 function renderModels(models) {
     const container = $("#copilot_models_list");
     container.empty().show();
+    $("#copilot_toggle_models_btn").show();
+    setModelsPanelCollapsed(false);
 
     // 카테고리별 그룹핑
     const categories = {
@@ -334,6 +345,18 @@ function renderModels(models) {
             groupHtml.append(modelEl);
         }
         container.append(groupHtml);
+    }
+}
+
+function setModelsPanelCollapsed(collapsed) {
+    const panel = $("#copilot_models_panel");
+    const button = $("#copilot_toggle_models_btn");
+    if (collapsed) {
+        panel.slideUp(150);
+        button.val("▸ 펼치기");
+    } else {
+        panel.slideDown(150);
+        button.val("▾ 접기");
     }
 }
 
@@ -702,6 +725,7 @@ jQuery(async () => {
 
     // 설정 로드
     loadSettings();
+    setModelsPanelCollapsed(true);
 });
 
 // 외부에서 사용할 수 있도록 export

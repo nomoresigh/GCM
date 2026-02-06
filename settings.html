@@ -60,12 +60,18 @@
                 <h4><i class="fa-solid fa-robot"></i> 사용 가능한 모델</h4>
                 <div class="flex-container flexFlowColumn">
                     <input id="copilot_fetch_models_btn" class="menu_button" type="button" value="🔄 모델 목록 새로고침" />
-                    <div id="copilot_models_list" class="copilot-models-container" style="display:none;">
-                        <!-- 모델 목록이 동적으로 렌더링됨 -->
+                    <div class="copilot-models-toolbar">
+                        <div class="copilot-models-title">모델 목록</div>
+                        <input id="copilot_toggle_models_btn" class="menu_button" type="button" value="▾ 접기" style="width:auto; display:none;" />
                     </div>
-                    <div id="copilot_model_detail" style="display:none;">
-                        <label>선택한 모델 JSON:</label>
-                        <textarea id="copilot_model_json" class="text_pole" rows="12" readonly style="font-family:Consolas,monospace; font-size:12px;"></textarea>
+                    <div id="copilot_models_panel" style="display:none;">
+                        <div id="copilot_models_list" class="copilot-models-container" style="display:none;">
+                            <!-- 모델 목록이 동적으로 렌더링됨 -->
+                        </div>
+                        <div id="copilot_model_detail" style="display:none;">
+                            <label>선택한 모델 JSON:</label>
+                            <textarea id="copilot_model_json" class="text_pole" rows="12" readonly style="font-family:Consolas,monospace; font-size:12px;"></textarea>
+                        </div>
                     </div>
                 </div>
             </div>
