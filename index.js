@@ -16,14 +16,14 @@ const defaultSettings = {
     autoRetry: false,
     retryCount: 3,
     retryDelay: 2,
-    retryOn400: true,
-    retryOnModelErr: true,
-    retryOn429: true,
-    retryOn500: true,
     stats: { total: 0, success: 0, fail: 0, retries: 0 },
 };
 
 let pollInterval = null;
+let gcmRetryCount = 0;
+let gcmRetrying = false;
+let gcmRetryTimeout = null;
+let gcmRetryPending = false;
 
 /**
  * SillyTavern의 CORS 프록시(/proxy/)를 통해 외부 API에 요청합니다.
@@ -77,10 +77,6 @@ function loadSettings() {
     $("#copilot_auto_retry").prop("checked", s.autoRetry).trigger("input");
     $("#copilot_retry_count").val(s.retryCount);
     $("#copilot_retry_delay").val(s.retryDelay);
-    $("#copilot_retry_on_400").prop("checked", s.retryOn400);
-    $("#copilot_retry_on_model_err").prop("checked", s.retryOnModelErr);
-    $("#copilot_retry_on_429").prop("checked", s.retryOn429);
-    $("#copilot_retry_on_500").prop("checked", s.retryOn500);
 
     updateStatsUI();
 }
@@ -486,83 +482,70 @@ function renderPremiumUsage(snapshots) {
 }
 
 // ============================================================
-// 자동 재시도 로직 (외부에서 호출 가능)
+// 전역 자동 재시도 (기본 커스텀 요청용)
 // ============================================================
-/**
- * Copilot Chat API를 자동 재시도와 함께 호출합니다.
- * 다른 확장이나 SillyTavern 커스텀 연동에서 사용할 수 있습니다.
- *
- * @param {Object} requestBody - chat/completions 요청 body
- * @returns {Promise<Object>} 응답 JSON
- */
-async function copilotChatWithRetry(requestBody) {
-    const s = getSettings();
-    const token = s.token;
-    if (!token) throw new Error("Copilot 토큰이 없습니다.");
 
-    const maxRetries = s.autoRetry ? s.retryCount : 0;
-    let lastError = null;
+function resetGlobalRetryState() {
+    gcmRetryCount = 0;
+    gcmRetrying = false;
+    gcmRetryPending = false;
+    if (gcmRetryTimeout) {
+        clearTimeout(gcmRetryTimeout);
+        gcmRetryTimeout = null;
+    }
+}
 
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-        try {
-            const res = await proxyFetch(`${COPILOT_API_BASE}/chat/completions`, {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${token}`,
-                    "Content-Type": "application/json",
-                    "Accept": "application/json",
-                    "Copilot-Integration-Id": "vscode-chat",
-                    "Editor-Version": "vscode/1.96.0",
-                    "Editor-Plugin-Version": "copilot-chat/0.24.0",
-                },
-                body: JSON.stringify(requestBody),
-            });
+function triggerGlobalRetry() {
+    const sendButton = document.getElementById("send_but");
+    if (sendButton && !sendButton.classList.contains("displayNone")) {
+        sendButton.click();
+        return;
+    }
 
-            if (res.ok) {
-                const json = await res.json();
-                recordRequest(true, attempt > 0);
-                return json;
-            }
-
-            // 에러 처리
-            const errBody = await res.text();
-            const shouldRetry = checkShouldRetry(res.status, errBody, s);
-
-            if (shouldRetry && attempt < maxRetries) {
-                const s2 = getSettings();
-                recordRequest(false, true);
-                console.warn(`[GCM] 재시도 ${attempt + 1}/${maxRetries} (HTTP ${res.status})`);
-                toastr.warning(`재시도 중... (${attempt + 1}/${maxRetries})`);
-                await sleep(s2.retryDelay * 1000);
-                continue;
-            }
-
-            lastError = `HTTP ${res.status}: ${errBody}`;
-            recordRequest(false, attempt > 0);
-            throw new Error(lastError);
-
-        } catch (err) {
-            if (attempt >= maxRetries) {
-                recordRequest(false, attempt > 0);
-                throw err;
-            }
-            lastError = err;
-            await sleep(s.retryDelay * 1000);
+    const sendForm = document.getElementById("rightSendForm");
+    if (sendForm) {
+        const btn = sendForm.querySelector(".mes_send");
+        if (btn) {
+            btn.click();
+            return;
         }
     }
-    throw new Error(lastError || "알 수 없는 에러");
+
+    try {
+        $("#send_but").trigger("click");
+    } catch (err) {
+        console.error("[GCM] 재시도 트리거 실패:", err);
+    }
 }
 
-function checkShouldRetry(status, body, settings) {
-    if (status === 400 && settings.retryOn400) return true;
-    if (status === 429 && settings.retryOn429) return true;
-    if (status >= 500 && settings.retryOn500) return true;
-    if (settings.retryOnModelErr && body && body.toLowerCase().includes("model")) return true;
-    return false;
-}
+function scheduleGlobalRetry() {
+    const settings = getSettings();
+    if (!settings.autoRetry) return;
 
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    const maxRetries = settings.retryCount || 0;
+    if (maxRetries <= 0) return;
+
+    if (gcmRetryCount >= maxRetries) {
+        gcmRetrying = false;
+        return;
+    }
+
+    if (gcmRetrying) return;
+    gcmRetrying = true;
+    gcmRetryCount++;
+
+    const delayMs = Math.max(1, settings.retryDelay || 1) * 1000;
+    toastr.warning(`재시도 중... (${gcmRetryCount}/${maxRetries})`);
+
+    if (gcmRetryTimeout) {
+        clearTimeout(gcmRetryTimeout);
+    }
+    gcmRetryTimeout = setTimeout(() => {
+        gcmRetrying = false;
+        gcmRetryTimeout = null;
+        gcmRetryPending = true;
+        triggerGlobalRetry();
+    }, delayMs);
 }
 
 // ============================================================
@@ -589,6 +572,43 @@ function copyToClipboard(text, label = "텍스트") {
 // 초기화
 // ============================================================
 jQuery(async () => {
+    if (!window.__gcmFetchWrapped) {
+        window.__gcmFetchWrapped = true;
+        const originalFetch = window.fetch;
+
+        window.fetch = async function (...args) {
+            const [resource, config] = args;
+            const url = typeof resource === "string" ? resource : resource?.url || "";
+
+            const isChatCompletion = url.includes("/api/backends/chat-completions/generate");
+            const isPostMethod = !config?.method || config.method.toUpperCase() === "POST";
+
+            try {
+                const response = await originalFetch.apply(this, args);
+
+                if (isChatCompletion && isPostMethod) {
+                    if (!response.ok) {
+                        console.warn(`[GCM] Chat completion failed with status ${response.status}. Retrying...`);
+                        scheduleGlobalRetry();
+                    } else {
+                        resetGlobalRetryState();
+                    }
+                }
+
+                return response;
+            } catch (error) {
+                if (isChatCompletion && isPostMethod) {
+                    const settings = getSettings();
+                    if (settings.autoRetry) {
+                        console.warn("[GCM] Chat completion threw an error. Retrying...", error?.message || error);
+                        scheduleGlobalRetry();
+                    }
+                }
+                throw error;
+            }
+        };
+    }
+
     const settingsHtml = await $.get(`${extensionFolderPath}/settings.html`);
     $("#extensions_settings").append(settingsHtml);
 
@@ -695,22 +715,6 @@ jQuery(async () => {
         getSettings().retryDelay = parseInt($(this).val()) || 2;
         saveSettings();
     });
-    $("#copilot_retry_on_400").on("change", function () {
-        getSettings().retryOn400 = $(this).prop("checked");
-        saveSettings();
-    });
-    $("#copilot_retry_on_model_err").on("change", function () {
-        getSettings().retryOnModelErr = $(this).prop("checked");
-        saveSettings();
-    });
-    $("#copilot_retry_on_429").on("change", function () {
-        getSettings().retryOn429 = $(this).prop("checked");
-        saveSettings();
-    });
-    $("#copilot_retry_on_500").on("change", function () {
-        getSettings().retryOn500 = $(this).prop("checked");
-        saveSettings();
-    });
 
     // 통계 초기화
     $("#copilot_reset_stats_btn").on("click", () => {
@@ -723,7 +727,21 @@ jQuery(async () => {
     // 설정 로드
     loadSettings();
     setModelsPanelCollapsed(true);
-});
 
-// 외부에서 사용할 수 있도록 export
-window.copilotChatWithRetry = copilotChatWithRetry;
+    try {
+        const { eventSource, event_types } = getContext();
+        eventSource.on(event_types.GENERATION_STARTED, (_type, _params, isDryRun) => {
+            if (isDryRun) return;
+            if (gcmRetryPending) {
+                gcmRetryPending = false;
+                return;
+            }
+            resetGlobalRetryState();
+        });
+        eventSource.on(event_types.CHAT_CHANGED, () => {
+            resetGlobalRetryState();
+        });
+    } catch (err) {
+        console.warn("[GCM] Failed to attach generation events:", err);
+    }
+});

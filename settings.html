@@ -91,22 +91,6 @@
                         <input id="copilot_retry_count" type="number" class="text_pole" min="1" max="20" value="3" style="width:80px;" />
                         <label for="copilot_retry_delay">재시도 간격 (초):</label>
                         <input id="copilot_retry_delay" type="number" class="text_pole" min="1" max="60" value="2" style="width:80px;" />
-                        <div class="flex-container" style="align-items:center;">
-                            <input id="copilot_retry_on_400" type="checkbox" checked />
-                            <label for="copilot_retry_on_400">400 Bad Request 시 재시도</label>
-                        </div>
-                        <div class="flex-container" style="align-items:center;">
-                            <input id="copilot_retry_on_model_err" type="checkbox" checked />
-                            <label for="copilot_retry_on_model_err">Model not supported 시 재시도</label>
-                        </div>
-                        <div class="flex-container" style="align-items:center;">
-                            <input id="copilot_retry_on_429" type="checkbox" checked />
-                            <label for="copilot_retry_on_429">429 Rate Limit 시 재시도</label>
-                        </div>
-                        <div class="flex-container" style="align-items:center;">
-                            <input id="copilot_retry_on_500" type="checkbox" checked />
-                            <label for="copilot_retry_on_500">500+ 서버 에러 시 재시도</label>
-                        </div>
                     </div>
                 </div>
             </div>
