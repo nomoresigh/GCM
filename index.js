@@ -2,7 +2,7 @@
 import { extension_settings, getContext } from "../../../extensions.js";
 import { saveSettingsDebounced } from "../../../../script.js";
 
-const extensionName = "SillyTavern-CopilotManager";
+const extensionName = "GCM";
 const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
 
 const CLIENT_ID = "01ab8ac9400c4e429b23";
@@ -470,7 +470,7 @@ async function copilotChatWithRetry(requestBody) {
             if (shouldRetry && attempt < maxRetries) {
                 const s2 = getSettings();
                 recordRequest(false, true);
-                console.warn(`[CopilotManager] 재시도 ${attempt + 1}/${maxRetries} (HTTP ${res.status})`);
+                console.warn(`[GCM] 재시도 ${attempt + 1}/${maxRetries} (HTTP ${res.status})`);
                 toastr.warning(`재시도 중... (${attempt + 1}/${maxRetries})`);
                 await sleep(s2.retryDelay * 1000);
                 continue;
