@@ -48,6 +48,46 @@ async function proxyFetch(url, options = {}) {
     return fetch(proxyUrl, fetchOptions);
 }
 
+/**
+ * GitHub API 요청을 최적의 방식으로 수행합니다.
+ * - api.github.com: CORS를 공식 지원하므로 직접 요청 (프록시 불필요)
+ * - 그 외 (api.githubcopilot.com 등): CORS 프록시를 통해 요청
+ *   → basicAuthMode에서는 Authorization 헤더 충돌로 실패할 수 있음
+ * @param {string} url 요청할 외부 URL
+ * @param {RequestInit} [options] fetch 옵션
+ * @returns {Promise<Response>} fetch 응답
+ */
+async function githubApiFetch(url, options = {}) {
+    const headers = {};
+    if (options.headers) {
+        if (options.headers instanceof Headers) {
+            options.headers.forEach((v, k) => { headers[k] = v; });
+        } else {
+            Object.assign(headers, options.headers);
+        }
+    }
+
+    const fetchOpts = {
+        method: options.method || "GET",
+        headers: headers,
+    };
+    if (options.body != null) fetchOpts.body = options.body;
+
+    // api.github.com은 CORS를 공식 지원 → 브라우저에서 직접 요청
+    // (프록시를 거치지 않으므로 basicAuth Authorization 충돌 없음)
+    if (url.startsWith("https://api.github.com")) {
+        return fetch(url, fetchOpts);
+    }
+
+    // 그 외 도메인은 CORS 프록시 사용
+    // credentials:'omit'으로 브라우저의 캐시된 Basic Auth가
+    // 우리의 Authorization 헤더를 덮어쓰는 것을 방지하고,
+    // 401 시 로그인 팝업도 차단
+    const proxyUrl = `/proxy/${encodeURIComponent(url)}`;
+    fetchOpts.credentials = "omit";
+    return fetch(proxyUrl, fetchOpts);
+}
+
 // ============================================================
 // 설정 로드 / 저장
 // ============================================================
@@ -212,7 +252,7 @@ async function fetchModels() {
     $("#copilot_fetch_models_btn").val("⏳ 가져오는 중...").prop("disabled", true);
 
     try {
-        const res = await proxyFetch(`${COPILOT_API_BASE}/models`, {
+        const res = await githubApiFetch(`${COPILOT_API_BASE}/models`, {
             headers: {
                 "Authorization": `Bearer ${token}`,
                 "Accept": "application/json",
@@ -221,6 +261,16 @@ async function fetchModels() {
                 "Editor-Plugin-Version": "copilot-chat/0.24.0",
             },
         });
+
+        if (res.status === 401) {
+            toastr.warning(
+                "basicAuthMode 환경에서는 모델 목록을 불러올 수 없습니다.\n" +
+                "(api.githubcopilot.com이 CORS 미지원 → 프록시 필수 → Basic Auth 충돌)",
+                "모델 목록",
+                { timeOut: 6000 },
+            );
+            return;
+        }
 
         if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
         const data = await res.json();
@@ -336,7 +386,8 @@ async function fetchUsageInfo() {
 
     try {
         // 1) Copilot 내부 토큰 정보 (구독 상태)
-        const tokenRes = await proxyFetch(COPILOT_INTERNAL_TOKEN_URL, {
+        // api.github.com은 CORS 지원 → 직접 브라우저 요청 (basicAuth 영향 없음)
+        const tokenRes = await githubApiFetch(COPILOT_INTERNAL_TOKEN_URL, {
             headers: {
                 "Authorization": `token ${token}`,
                 "Accept": "application/json",
@@ -349,7 +400,8 @@ async function fetchUsageInfo() {
         }
 
         // 2) 사용자 프리미엄 요청 사용량
-        const userRes = await proxyFetch("https://api.github.com/copilot_internal/user", {
+        // api.github.com은 CORS 지원 → 직접 브라우저 요청 (basicAuth 영향 없음)
+        const userRes = await githubApiFetch("https://api.github.com/copilot_internal/user", {
             headers: {
                 "Authorization": `token ${token}`,
                 "Accept": "application/json",
