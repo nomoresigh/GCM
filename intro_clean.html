@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>GCM: GitHub Copilot Manager</title>
+    <style>
+        /* 
+           GCM BRUTALIST THEME
+           Core Color: #00FF41 (Matrix/Terminal Green)
+           Bg Color: #050505
+        */
+
+        :root {
+            --c-accent: #00FF41;
+            --c-bg: #050505;
+            --c-surface: #111111;
+            --c-text: #E0E0E0;
+            --c-dim: #555555;
+            --f-display: 'Impact', 'Haettenschweiler', 'Arial Narrow Bold', sans-serif;
+            --f-body: 'Segoe UI', system-ui, sans-serif;
+            --f-mono: 'Consolas', 'Monaco', 'Courier New', monospace;
+            --grid-size: 40px;
+        }
+
+        body {
+            background-color: var(--c-bg);
+            color: var(--c-text);
+            font-family: var(--f-body);
+            margin: 0;
+            padding: 40px 0;
+            overflow-x: hidden;
+            line-height: 1.5;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            padding: 0 20px;
+            box-sizing: border-box;
+        }
+
+        /* GRID BACKGROUND */
+        .bg-grid {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100vh;
+            background-image: 
+                linear-gradient(var(--c-surface) 1px, transparent 1px),
+                linear-gradient(90deg, var(--c-surface) 1px, transparent 1px);
+            background-size: var(--grid-size) var(--grid-size);
+            z-index: -1;
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        /* HERO / TITLE */
+        .hero {
+            text-align: center;
+            margin-bottom: 80px;
+        }
+
+        .hero-title {
+            font-family: var(--f-display);
+            font-size: clamp(60px, 10vw, 150px);
+            line-height: 0.85;
+            margin: 0;
+            letter-spacing: -0.02em;
+            text-transform: uppercase;
+        }
+        
+        .hero-title span {
+            display: inline-block; /* or block if you want stacked */
+        }
+
+        .accent { color: var(--c-accent); }
+        .stroke {
+            -webkit-text-stroke: 1px var(--c-accent);
+            color: transparent;
+        }
+
+        .hero-subtitle {
+            font-family: var(--f-mono);
+            color: var(--c-dim);
+            margin-top: 20px;
+            letter-spacing: 0.1em;
+        }
+
+        /* CARDS GRID */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            width: 100%;
+        }
+
+        .card {
+            background: rgba(17, 17, 17, 0.8);
+            border: 1px solid #333;
+            padding: 30px;
+            transition: all 0.2s ease;
+            position: relative;
+            backdrop-filter: blur(5px);
+        }
+
+        .card:hover {
+            border-color: var(--c-accent);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 255, 65, 0.1);
+        }
+
+        .card h3 {
+            font-family: var(--f-display);
+            font-size: 1.8rem;
+            margin: 0 0 15px 0;
+            text-transform: uppercase;
+            color: var(--c-text);
+        }
+
+        .card p {
+            color: #888;
+            font-size: 1rem;
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        .card-no {
+            font-family: var(--f-mono);
+            color: var(--c-accent);
+            font-size: 0.8rem;
+            margin-bottom: 15px;
+            opacity: 0.7;
+            display: block;
+        }
+
+        /* ANIMATIONS */
+        .fade-in-up {
+            animation: fadeInUp 0.8s ease-out forwards;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        @keyframes fadeInUp {
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .delay-1 { animation-delay: 0.1s; }
+        .delay-2 { animation-delay: 0.2s; }
+        .delay-3 { animation-delay: 0.3s; }
+        .delay-4 { animation-delay: 0.4s; }
+
+    </style>
+</head>
+<body class="glitch-body">
+
+    <div class="bg-grid"></div>
+
+    <!-- TITLE SECTION -->
+    <header class="container hero fade-in-up">
+        <h1 class="hero-title">
+            <span class="stroke">GITHUB</span> <span class="accent">COPILOT</span> <br>
+            <span style="color:var(--c-text);">MANAGER</span>
+        </h1>
+        <div class="hero-subtitle">SILLYTAVERN EXTENSION</div>
+    </header>
+
+    <!-- CARDS SECTION -->
+    <section class="container">
+        <div class="feature-grid">
+            
+            <!-- CARD 1 -->
+            <div class="card fade-in-up delay-1">
+                <span class="card-no">01</span>
+                <h3>기능 제목</h3>
+                <p>여기에 기능을 설명하는 텍스트를 입력하세요.</p>
+            </div>
+
+            <!-- CARD 2 -->
+            <div class="card fade-in-up delay-2">
+                <span class="card-no">02</span>
+                <h3>기능 제목</h3>
+                <p>여기에 기능을 설명하는 텍스트를 입력하세요.</p>
+            </div>
+
+            <!-- CARD 3 -->
+            <div class="card fade-in-up delay-3">
+                <span class="card-no">03</span>
+                <h3>기능 제목</h3>
+                <p>여기에 기능을 설명하는 텍스트를 입력하세요.</p>
+            </div>
+
+            <!-- CARD 4 -->
+            <div class="card fade-in-up delay-4">
+                <span class="card-no">04</span>
+                <h3>기능 제목</h3>
+                <p>여기에 기능을 설명하는 텍스트를 입력하세요.</p>
+            </div>
+
+        </div>
+    </section>
+
+</body>
+</html>
