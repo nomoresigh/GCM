@@ -1,6 +1,6 @@
 // SillyTavern GitHub Copilot Manager Extension
 import { extension_settings, getContext } from "../../../extensions.js";
-import { saveSettingsDebounced, getRequestHeaders } from "../../../../script.js";
+import { saveSettingsDebounced } from "../../../../script.js";
 
 const extensionName = "GCM";
 const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
@@ -27,22 +27,7 @@ let pollInterval = null;
 async function proxyFetch(url, options = {}) {
     const proxyUrl = `/proxy/${encodeURIComponent(url)}`;
 
-    // SillyTavern 인증 헤더(CSRF 토큰 등)를 먼저 포함시킴
-    // basicAuthMode에서도 CSRF 토큰으로 ST 서버 인증을 통과시키고,
-    // Authorization 헤더는 외부 API(GitHub) 전용으로 사용 가능하게 함
-    const stHeaders = typeof getRequestHeaders === 'function' ? getRequestHeaders() : {};
     const headers = {};
-
-    // ST 인증 헤더 복사 (Content-Type 제외 — 요청마다 별도 설정)
-    if (stHeaders) {
-        for (const [key, value] of Object.entries(stHeaders)) {
-            if (key.toLowerCase() !== 'content-type') {
-                headers[key] = value;
-            }
-        }
-    }
-
-    // 사용자 지정 헤더 병합 (Authorization 등 외부 API용 헤더가 여기서 설정됨)
     if (options.headers) {
         if (options.headers instanceof Headers) {
             options.headers.forEach((v, k) => { headers[k] = v; });
@@ -54,7 +39,6 @@ async function proxyFetch(url, options = {}) {
     const fetchOptions = {
         method: options.method || "GET",
         headers: headers,
-        credentials: 'same-origin', // 세션 쿠키 포함
     };
 
     if (options.body != null) {
